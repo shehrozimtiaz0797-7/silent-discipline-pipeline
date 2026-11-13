@@ -1,0 +1,67 @@
+name: Silent Discipline video
+
+on:
+  # Started by cron-job.org (like the other channels) or by hand from the Actions tab.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: silent-discipline
+  cancel-in-progress: false
+
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TZ: Asia/Kuala_Lumpur
+      FFMPEG_PATH: ffmpeg
+      PYTHON: python
+      GEMINI_TEXT_MODEL: gemini-3.8-flash
+      GEMINI_TTS_MODEL: gemini-3.8-flash-tts
+      # deep calm voices, one per video in turn
+      GEMINI_TTS_VOICE: Charon,Orus,Algenib
+      VOICE_PITCH: "0.93"
+      VOICE_PACE: "0.96"
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg > /dev/null
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install drawing and music tools
+        run: pip install -q pillow numpy
+      - name: Make the video
+        run: node make-video.js
+      - name: Save history (no repeated lines)
+        if: always()
+        run: |
+          if [ -f history.json ]; then
+            git config user.name "silent-discipline-bot"
+            git config user.email "silent-discipline-bot@users.noreply.github.com"
+            git add history.json
+            git commit -m "Update history $(date +'%Y-%m-%d %H:%M')" || echo "Nothing to save"
+            git pull --rebase || true
+            git push || echo "Could not save history"
+          fi
+      - name: Keep the video (download from this run page)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: silent-discipline-${{ github.run_number }}
+          path: |
+            output/*/final.mp4
+            output/*/caption.txt
+            output/*/script.json
+            logs/pipeline.log
+          retention-days: 3
+          if-no-files-found: ignore

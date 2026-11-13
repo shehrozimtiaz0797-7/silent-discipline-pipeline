@@ -1,0 +1,8 @@
+{
+  "name": "silent-discipline-pipeline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Silent Discipline: stoic motivation Shorts for TikTok, made automatically",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node make-video.js", "sample": "node make-video.js --sample" }
+}

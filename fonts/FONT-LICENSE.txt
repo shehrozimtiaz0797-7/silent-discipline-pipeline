@@ -1,0 +1,8 @@
+Poppins (Poppins-Bold.ttf, Poppins-Medium.ttf)
+Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
+Licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
+The fonts are free to use in videos and to share together with this project.
+
+Lora (Lora-Variable.ttf)
+Copyright The Lora Project Authors (https://github.com/cyrealtype/Lora-Cyrillic)
+Licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
