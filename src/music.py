@@ -106,13 +106,13 @@ def whoosh(dur=1.0, rise=True):
     return (x * e * 0.5).astype(np.float32)
 
 
-def riser(dur=2.4):
+def riser(dur=1.3):
     n = int(dur * SR)
     t = np.arange(n) / SR
-    e = (t / dur) ** 2.2
-    ph = 2 * np.pi * np.cumsum(200 + 900 * (t / dur) ** 2) / SR
-    x = fft_filter(np.random.uniform(-1, 1, n).astype(np.float32), lo=1200) * 0.6 + 0.25 * np.sin(ph)
-    return (x * e * 0.45).astype(np.float32)
+    e = (t / dur) ** 3
+    ph = 2 * np.pi * np.cumsum(220 + 500 * (t / dur) ** 2) / SR
+    x = fft_filter(np.random.uniform(-1, 1, n).astype(np.float32), lo=900, hi=5000) * 0.35 + 0.35 * np.sin(ph)
+    return (x * e * 0.4).astype(np.float32)
 
 
 # ---------- harmony ----------
@@ -139,13 +139,13 @@ for b in range(bars):
     chord = [root * 2, root * 2 * third, root * 2 * 1.4983]
     if at >= starts[min(1, len(starts) - 1)] - 0.5:
         bright = 0.35 + 0.35 * min(1, at / max(1, last))
-        put(pad(chord, BAR + 0.8, bright), at, 1.0 + 0.8 * min(1, at / max(1, last)))
+        put(pad(chord, BAR + 0.8, bright), at, 1.4 + 1.0 * min(1, at / max(1, last)))
     put(piano(root, 4.0, 0.55), at, 1.0)  # low note
     scale = [root * 4, root * 4 * third, root * 4 * 1.4983, root * 8, root * 4 * 1.335]
     for beat in range(4):
         if beat == 0 or rng.random() < 0.7:
             note = rng.choice(scale)
-            put(piano(note, 2.5, 0.45 + 0.2 * rng.random()), at + beat * BEAT, 1.0, pan=rng.uniform(-0.4, 0.4))
+            put(piano(note, 2.5, 0.55 + 0.2 * rng.random()), at + beat * BEAT, 1.3, pan=rng.uniform(-0.4, 0.4))
 
 # war drums from the middle line until the last line
 tt = mid
@@ -155,10 +155,10 @@ while tt < last - 0.2:
     tt += BEAT * 2
 
 # riser into the last line, then the big impact
-put(riser(2.4), max(0.5, last - 2.4), 1.0)
+put(riser(1.3), max(0.5, last - 1.3), 0.8)
 put(boom(3.5, 1.3), last, 1.0)
 put(braam(3.0), last, 0.8)
-put(fft_filter(np.random.uniform(-1, 1, int(2.5 * SR)).astype(np.float32), lo=3000) * env_exp(int(2.5 * SR), 2.2) * 0.25, last, 1.0)
+put(fft_filter(np.random.uniform(-1, 1, int(1.5 * SR)).astype(np.float32), lo=3000, hi=9000) * env_exp(int(1.5 * SR), 3.5) * 0.15, last, 1.0)
 
 # ---------- reverb (convolution with a decaying-noise room) ----------
 ir_n = int(2.8 * SR)

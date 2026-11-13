@@ -8,6 +8,34 @@ const { withRetry } = require('./retry');
 
 const TRIM = 'silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse';
 
+// Finds where each line is spoken: the pauses between lines are the longest silences in the voice.
+async function lineSegments(wav, dur, lines) {
+  const { spawn } = require('child_process');
+  const out = await new Promise(resolve => {
+    const p = spawn(FFMPEG(), ['-hide_banner', '-i', wav, '-af', 'silencedetect=noise=-38dB:d=0.18', '-f', 'null', '-']);
+    let err = ''; p.stderr.on('data', d => { err += d; }); p.on('close', () => resolve(err));
+  });
+  const gaps = []; let st = null;
+  for (const line of out.split('\n')) {
+    const a = line.match(/silence_start: ([\d.]+)/); const b = line.match(/silence_end: ([\d.]+)/);
+    if (a) st = Number(a[1]);
+    if (b && st !== null) { gaps.push({ start: st, end: Number(b[1]) }); st = null; }
+  }
+  const inner = gaps.filter(g => g.start > 0.3 && g.end < dur - 0.2);
+  const need = lines.length - 1;
+  if (inner.length < need) return null;
+  const chosen = inner.slice().sort((x, y) => (y.end - y.start) - (x.end - x.start)).slice(0, need).sort((x, y) => x.start - y.start);
+  const segs = [];
+  let s0 = 0;
+  for (const g of chosen) { segs.push({ start: s0, end: g.start }); s0 = g.end; }
+  segs.push({ start: s0, end: dur });
+  // sanity: each line's share of time should roughly follow its length
+  const chars = lines.map(l => l.replace(/\*/g, '').length);
+  const tot = chars.reduce((a, b) => a + b, 0);
+  const bad = segs.some((sg, i) => { const share = (sg.end - sg.start) / dur; const want = chars[i] / tot; return share < want * 0.4 || share > want * 2.2; });
+  return bad ? null : segs;
+}
+
 let turn = 0;
 async function makeVoice(script, dir, n) {
   if (!env('GEMINI_API_KEY') || env('VOICE', 'on') === 'off') return null;
@@ -27,8 +55,9 @@ async function makeVoice(script, dir, n) {
       '-ar', '48000', wav]);
     fs.rmSync(raw, { force: true });
     const dur = await duration(wav);
-    log(`Voice ready (${voice}, ${dur.toFixed(1)}s)`);
-    return { file: wav, dur };
+    const segments = await lineSegments(wav, dur, script.lines);
+    log(`Voice ready (${voice}, ${dur.toFixed(1)}s, lines found: ${segments ? 'yes' : 'estimated'})`);
+    return { file: wav, dur, segments };
   } catch (e) {
     log(`Voice failed: ${String(e.message).slice(0, 200)}`);
     return null;

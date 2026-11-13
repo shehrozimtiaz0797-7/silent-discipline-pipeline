@@ -219,8 +219,9 @@ for i, text in enumerate(lines):
         cw += (SPACE if cw else 0) + wl
     rows.append((cur, cw))
     t0 = starts[i]
-    t1 = starts[i + 1] if i + 1 < len(starts) else voice_end
-    span = max(0.6, (t1 - t0) * 0.85)
+    ends_ = spec.get("line_ends")
+    t1 = ends_[i] if ends_ else (starts[i + 1] if i + 1 < len(starts) else voice_end)
+    span = max(0.5, (t1 - t0) * (0.92 if ends_ else 0.85))
     total_chars = sum(len(w) + 2 for w, _ in toks)
     acc = 0
     items = []
